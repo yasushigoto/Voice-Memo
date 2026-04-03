@@ -178,7 +178,7 @@ header h1 { font-size: 17px; font-weight: 600; }
 
   <div class="mode-bar">
     <button class="mode-btn active" data-mode="memo" onclick="setMode(this)">📝 メモ</button>
-    <button class="mode-btn" data-mode="business" onclick="setMode(this)">💼 文書</button>
+    <button class="mode-btn" data-mode="business" onclick="setMode(this)">💬 文章</button>
   </div>
 
   <!-- 履歴画面 -->
@@ -197,27 +197,19 @@ header h1 { font-size: 17px; font-weight: 600; }
       <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V21h-2v2h6v-2h-2v-2.07A8 8 0 0 0 20 12h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z"/></svg>
     </button>
     <div class="waveform-wrap" id="waveform"></div>
-    <div class="mic-label" id="micLabel">タップして録音</div>
-    <button onclick="showHistory()" id="historyBtn" style="margin-top:4px;padding:10px 28px;font-size:14px;font-weight:500;border:1px solid #c7c7cc;border-radius:12px;background:#fff;color:#3a3a3c;cursor:pointer;-webkit-appearance:none;">🕐 履歴</button>
+    <div style="display:flex;gap:8px;margin-top:8px;width:100%;padding:0 16px;">
+      <button id="copyBtn" onclick="copyText('resultText', this)" class="mode-btn" style="opacity:0.35;pointer-events:none;">📋 コピー</button>
+      <button id="shareBtn" onclick="shareResult()" class="mode-btn" style="opacity:0.35;pointer-events:none;">📤 共有</button>
+      <button onclick="showHistory()" class="mode-btn">🕐 履歴</button>
+    </div>
   </div>
 
   <div class="status-bar" id="statusBar"></div>
 
   <div class="cards">
-    <div class="card" id="transcriptCard" style="display:none">
-      <div class="card-label">文字起こし（Whisper）</div>
-      <div class="card-text" id="transcriptText"></div>
-      <div class="card-actions">
-        <button class="action-btn" onclick="copyText('transcriptText', this)">コピー</button>
-      </div>
-    </div>
     <div class="card" id="resultCard" style="display:none">
-      <div class="card-label" id="resultLabel">整形結果</div>
+      <div class="card-label" id="resultLabel">メモ</div>
       <div class="card-text" id="resultText"></div>
-      <div class="card-actions">
-        <button class="action-btn" onclick="copyText('resultText', this)">コピー</button>
-        <button class="action-btn primary" onclick="shareResult()">📤 共有・保存</button>
-      </div>
     </div>
   </div>
   </div><!-- /record-main -->
@@ -259,7 +251,7 @@ header h1 { font-size: 17px; font-weight: 600; }
 <script>
 var PROMPTS = {
   memo: "あなたは音声メモの書き起こしツールです。以下は口頭で話した内容の文字起こしです。\n\n【絶対に守ること】\n・話者が言ったことだけを箇条書きにする。一語一句変えない\n・断定は断定のまま、推量（〜だと思う、〜でしょう）は推量のまま、疑問（〜だろう？〜かな？）は疑問のまま残す\n・語調・ニュアンス・感情を変えない。客観的な言い回しに直さない\n・解釈・説明・補足・アドバイス・効能は一切追加しない\n・フィラー（えー、あのー等）と明らかな言い淀みのみ除去\n・誤字・誤変換の修正のみ行う（表現は変えない）\n・日本語で出力\n\n【出力例】\n入力:美南はどうせYouTubeを見ているでしょう。なんで今日は遊びに行かなかったんだろう?\n出力:\n・美南はどうせYouTubeを見ているでしょう\n・なんで今日は遊びに行かなかったんだろう?",
-  business: "あなたは音声メモの書き起こしツールです。以下は口頭で話した内容の文字起こしです。\n内容を自動判断し、ビジネス・正式文書として適切な文章に整形してください。\n\n【整形ルール】\n・話し言葉を自然な書き言葉に変換\n・医療・医学的内容が含まれる場合：医学用語・薬剤名・検査名・疾患名を正しく修正・補完する\n・解釈・説明・補足情報は追加しない。話した内容だけをまとめる\n・段落を整理して読みやすくまとめる\n・内容の意味・ニュアンスは変えない\n・日本語で出力"
+  business: "あなたは音声メモの書き起こしツールです。以下は口頭で話した内容の文字起こしです。\n\n【絶対に守ること】\n・話者が言ったことだけを書く。一切追加しない\n・断定は断定のまま、推量（〜だと思う、〜でしょう）は推量のまま、疑問（〜だろう？〜かな？）は疑問のまま残す\n・話し言葉のクセ・フィラー（えー、あのー等）だけ除去し、自然な書き言葉に変換する\n・医療・医学的内容が含まれる場合：医学用語・薬剤名・検査名・疾患名を正しく修正する\n・解釈・説明・補足・要約・アドバイスは一切追加しない\n・段落に整理して読みやすくする\n・日本語で出力\n\n【出力例】\n入力：美南はどうせYouTubeを見ているでしょう。なんで今日は遊びに行かなかったんだろう？\n出力：美南はどうせYouTubeを見ているでしょう。なぜ今日は遊びに行かなかったのだろうか。"
 };
 
 var currentMode = 'memo';
@@ -544,8 +536,11 @@ function startRecording() {
     startWaveform(stream);
     document.getElementById('micBtn').classList.add('recording');
     document.getElementById('micLabel').textContent = 'タップして停止';
-    document.getElementById('transcriptCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('copyBtn').style.opacity = '0.35';
+    document.getElementById('copyBtn').style.pointerEvents = 'none';
+    document.getElementById('shareBtn').style.opacity = '0.35';
+    document.getElementById('shareBtn').style.pointerEvents = 'none';
     setStatus('', '');
     seconds = 0;
     document.getElementById('timer').textContent = '00:00';
@@ -597,8 +592,8 @@ function processAudio() {
     var transcript = (wData.text || '').trim();
     if (!transcript) { setStatus('音声が認識できませんでした', 'error'); return; }
 
-    document.getElementById('transcriptText').textContent = transcript;
-    document.getElementById('transcriptCard').style.display = 'block';
+    var _t = transcript;
+    
     setStatus('<span class="spinner"></span>整形中…', 'loading');
 
     // ② GPT整形プロンプトに固有名詞辞書を追加
@@ -625,8 +620,12 @@ function processAudio() {
       var result = gData.choices && gData.choices[0] && gData.choices[0].message.content.trim() || '';
 
       document.getElementById('resultText').textContent = result || '（結果なし）';
-      document.getElementById('resultLabel').textContent = currentMode === 'memo' ? '📝 メモ' : '💼 文書整形';
+      document.getElementById('resultLabel').textContent = currentMode === 'memo' ? '📝 メモ' : '💬 文章';
       document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('copyBtn').style.opacity = '1';
+      document.getElementById('copyBtn').style.pointerEvents = 'auto';
+      document.getElementById('shareBtn').style.opacity = '1';
+      document.getElementById('shareBtn').style.pointerEvents = 'auto';
       setStatus('完了 ✓', '');
       setTimeout(function() { setStatus('', ''); }, 3000);
 
