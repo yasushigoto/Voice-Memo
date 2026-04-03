@@ -206,10 +206,15 @@ header h1 { font-size: 17px; font-weight: 600; }
       <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V21h-2v2h6v-2h-2v-2.07A8 8 0 0 0 20 12h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z"/></svg>
     </button>
     <div class="waveform-wrap" id="waveform"></div>
-    <div style="display:flex;gap:8px;margin-top:8px;width:100%;padding:0 16px;">
-      <button id="copyBtn" onclick="copyText('resultText', this)" class="mode-btn" style="opacity:0.35;pointer-events:none;">📋 コピー</button>
-      <button id="shareBtn" onclick="shareResult()" class="mode-btn" style="opacity:0.35;pointer-events:none;">📤 共有</button>
-      <button id="historyBtn" onclick="showHistory()" class="mode-btn">🕐 履歴</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;width:100%;padding:0 16px;">
+      <div style="display:flex;gap:8px;">
+        <button id="copyBtn" onclick="copyText('resultText', this)" class="mode-btn" style="opacity:0.35;pointer-events:none;">📋 コピー</button>
+        <button id="shareBtn" onclick="shareResult()" class="mode-btn" style="opacity:0.35;pointer-events:none;">📤 共有</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="historyBtn" onclick="showHistory()" class="mode-btn">🕐 履歴</button>
+        <button id="emailBtn" onclick="translateToEmail()" class="mode-btn" style="opacity:0.35;pointer-events:none;">🔤 英文メール</button>
+      </div>
     </div>
   </div>
 
@@ -525,6 +530,38 @@ function updateVocabBadge() {
   // バッジ削除済み・何もしない
 }
 
+// ── Email translation ──
+function translateToEmail() {
+  var text = document.getElementById('resultText').innerText || document.getElementById('resultText').textContent;
+  if (!text.trim()) return;
+  setStatus('<span class="spinner"></span>英文メール変換中…', 'loading');
+
+  fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 1000,
+      messages: [
+        { role: 'system', content: '以下の日本語テキストを、丁寧でプロフェッショナルな英語メールに変換してください。件名（Subject:）と本文を含めてください。話した内容を忠実に英訳し、余計な情報は追加しないでください。' },
+        { role: 'user', content: text }
+      ]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(gData) {
+    if (gData.error) throw new Error(gData.error.message);
+    var result = gData.choices && gData.choices[0] && gData.choices[0].message.content.trim() || '';
+    document.getElementById('resultText').innerText = result;
+    document.getElementById('resultLabel').textContent = '🔤 英文メール';
+    setStatus('完了 ✓', '');
+    setTimeout(function() { setStatus('', ''); }, 3000);
+  })
+  .catch(function(e) {
+    setStatus('エラー: ' + e.message, 'error');
+  });
+}
+
 // ── Edit ──
 function toggleEdit() {
   var el = document.getElementById('resultText');
@@ -629,6 +666,8 @@ function startRecording() {
     document.getElementById('copyBtn').style.pointerEvents = 'none';
     document.getElementById('shareBtn').style.opacity = '0.35';
     document.getElementById('shareBtn').style.pointerEvents = 'none';
+    document.getElementById('emailBtn').style.opacity = '0.35';
+    document.getElementById('emailBtn').style.pointerEvents = 'none';
     setStatus('', '');
     seconds = 0;
     document.getElementById('timer').textContent = '00:00';
@@ -722,6 +761,8 @@ function processAudio() {
       document.getElementById('copyBtn').style.pointerEvents = 'auto';
       document.getElementById('shareBtn').style.opacity = '1';
       document.getElementById('shareBtn').style.pointerEvents = 'auto';
+      document.getElementById('emailBtn').style.opacity = '1';
+      document.getElementById('emailBtn').style.pointerEvents = 'auto';
       setStatus('完了 ✓', '');
       setTimeout(function() { setStatus('', ''); }, 3000);
 
