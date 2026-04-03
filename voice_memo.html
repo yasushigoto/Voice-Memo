@@ -125,13 +125,16 @@ header h1 { font-size: 17px; font-weight: 600; }
 /* ── Vocab modal ── */
 #vocabModal {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4); z-index: 100;
-  align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,0.4); z-index: 200;
+  align-items: center; justify-content: center;
+  padding: 20px;
 }
 #vocabModal.open { display: flex; }
 .modal-box {
-  background: #fff; border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 600px; padding: 20px 20px 40px;
+  background: #fff; border-radius: 20px;
+  width: 100%; max-width: 560px;
+  padding: 20px 20px 24px;
+  max-height: 80vh; overflow-y: auto;
 }
 .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
 .modal-hint { font-size: 13px; color: #6e6e73; margin-bottom: 14px; line-height: 1.6; }
@@ -174,7 +177,7 @@ header h1 { font-size: 17px; font-weight: 600; }
     <h1>🎙️ ボイスメモ</h1>
     <div class="header-btns">
       <button class="hdr-btn" onclick="openVocabModal()">📖 用語</button>
-      <button class="hdr-btn" onclick="resetKey()">鍵</button>
+      <button class="hdr-btn" onclick="resetKey()" oncontextmenu="resetPin(event)" ontouchstart="startLongPress()" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">🔑</button>
     </div>
   </header>
 
@@ -218,10 +221,10 @@ header h1 { font-size: 17px; font-weight: 600; }
 </div>
 
 <!-- PIN Modal -->
-<div id="pinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
+<div id="pinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:28px 24px;width:88%;max-width:320px;text-align:center;">
     <div style="font-size:17px;font-weight:600;margin-bottom:6px;">🔒 用語リスト</div>
-    <div style="font-size:13px;color:#6e6e73;margin-bottom:20px;">4桁のPINを入力してください</div>
+    <div id="pinInstruction" style="font-size:13px;color:#6e6e73;margin-bottom:20px;">4桁のPINを入力してください</div>
     <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;">
       <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
       <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
@@ -231,9 +234,8 @@ header h1 { font-size: 17px; font-weight: 600; }
     <div id="pinError" style="font-size:13px;color:#ff3b30;min-height:18px;margin-bottom:12px;"></div>
     <div style="display:flex;gap:10px;">
       <button onclick="closePinModal()" style="flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#f2f2f7;color:#3a3a3c;cursor:pointer;">キャンセル</button>
-      <button onclick="checkPin()" style="flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#007aff;color:#fff;cursor:pointer;">確認</button>
+      <button onclick="checkPin()" style="flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#007aff;color:#fff;cursor:pointer;">次へ</button>
     </div>
-    <div id="pinSetupHint" style="font-size:12px;color:#8e8e93;margin-top:14px;line-height:1.5;"></div>
   </div>
 </div>
 
@@ -244,8 +246,8 @@ header h1 { font-size: 17px; font-weight: 600; }
     <div class="modal-hint">名前・薬品名・施設名など、認識精度を上げたい言葉を入力してください。WhisperとGPTの両方に反映されます。</div>
     <textarea id="vocabModalInput" placeholder="例：&#10;息子の名前：陸（りく）&#10;フォシーガ、エンレスト&#10;田中一郎、山田花子"></textarea>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeVocabModal()">キャンセル</button>
-      <button class="btn-save" onclick="saveVocab()">保存</button>
+      <button class="btn-cancel" onclick="closeVocabModal()" ontouchend="closeVocabModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveVocab()" ontouchend="saveVocab()">保存</button>
     </div>
   </div>
 </div>
@@ -304,6 +306,28 @@ function saveKey() {
   updateVocabBadge();
 }
 
+var longPressTimer = null;
+
+function startLongPress() {
+  longPressTimer = setTimeout(function() {
+    resetPin();
+  }, 800);
+}
+
+function cancelLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+function resetPin() {
+  if (typeof event !== 'undefined' && event.preventDefault) event.preventDefault();
+  if (!confirm('PINをリセットしますか？\n次回用語リストを開いたとき新しいPINを設定できます。')) return;
+  localStorage.removeItem('vocab_pin');
+  alert('PINをリセットしました。');
+}
+
 function resetKey() {
   if (!confirm('APIキーをリセットしますか？')) return;
   localStorage.removeItem('openai_key');
@@ -324,9 +348,9 @@ function openVocabModal() {
   var pin = localStorage.getItem('vocab_pin') || '';
   if (!pin) {
     // PINが未設定：新規設定モード
-    document.getElementById('pinSetupHint').textContent = 'PINが未設定です。4桁を入力すると新しいPINとして登録されます。';
+    document.getElementById('pinInstruction').textContent = '新しい4桁のPINを設定してください';
   } else {
-    document.getElementById('pinSetupHint').textContent = '';
+    document.getElementById('pinInstruction').textContent = '4桁のPINを入力してください';
   }
   document.getElementById('pinError').textContent = '';
   document.querySelectorAll('.pin-digit').forEach(function(el) { el.value = ''; });
@@ -347,8 +371,18 @@ function openVocabModal() {
   });
 }
 
+var pinStep = 'enter'; // 'enter' | 'confirm'
+var pinFirst = '';
+
 function closePinModal() {
   document.getElementById('pinModal').style.display = 'none';
+  pinStep = 'enter';
+  pinFirst = '';
+}
+
+function clearPinDigits() {
+  document.querySelectorAll('.pin-digit').forEach(function(el){ el.value = ''; });
+  setTimeout(function(){ document.querySelectorAll('.pin-digit')[0].focus(); }, 50);
 }
 
 function checkPin() {
@@ -357,21 +391,42 @@ function checkPin() {
     document.getElementById('pinError').textContent = '4桁すべて入力してください';
     return;
   }
+  document.getElementById('pinError').textContent = '';
   var savedPin = localStorage.getItem('vocab_pin') || '';
-  if (!savedPin) {
-    // 新規PIN登録
-    localStorage.setItem('vocab_pin', entered);
-    closePinModal();
-    openVocabModalDirect();
+
+  if (savedPin) {
+    // 既存PIN照合
+    if (entered === savedPin) {
+      closePinModal();
+      openVocabModalDirect();
+    } else {
+      document.getElementById('pinError').textContent = 'PINが違います';
+      clearPinDigits();
+    }
     return;
   }
-  if (entered === savedPin) {
-    closePinModal();
-    openVocabModalDirect();
-  } else {
-    document.getElementById('pinError').textContent = 'PINが違います';
-    document.querySelectorAll('.pin-digit').forEach(function(el){ el.value=''; });
-    document.querySelectorAll('.pin-digit')[0].focus();
+
+  // 新規PIN設定：2ステップ
+  if (pinStep === 'enter') {
+    pinFirst = entered;
+    pinStep = 'confirm';
+    document.getElementById('pinInstruction').textContent = 'もう一度同じPINを入力してください';
+    clearPinDigits();
+    return;
+  }
+
+  if (pinStep === 'confirm') {
+    if (entered === pinFirst) {
+      localStorage.setItem('vocab_pin', entered);
+      closePinModal();
+      openVocabModalDirect();
+    } else {
+      document.getElementById('pinError').textContent = '一致しません。最初からやり直してください';
+      pinStep = 'enter';
+      pinFirst = '';
+      document.getElementById('pinInstruction').textContent = '4桁のPINを入力してください';
+      clearPinDigits();
+    }
   }
 }
 
@@ -383,7 +438,11 @@ function openVocabModalDirect() {
 function closeVocabModal() {
   document.getElementById('vocabModal').classList.remove('open');
 }
+var vocabSaving = false;
 function saveVocab() {
+  if (vocabSaving) return;
+  vocabSaving = true;
+  setTimeout(function(){ vocabSaving = false; }, 500);
   vocab = document.getElementById('vocabModalInput').value.trim();
   localStorage.setItem('vocab', vocab);
   updateVocabBadge();
@@ -456,11 +515,7 @@ function clearHistory() {
 }
 
 function updateVocabBadge() {
-  // バッジ非表示（削除済み）
-  if (false) {
-  } else {
-    badge.classList.remove('visible');
-  }
+  // バッジ削除済み・何もしない
 }
 
 // ── Mode ──
