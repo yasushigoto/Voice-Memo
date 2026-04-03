@@ -211,6 +211,26 @@ header h1 { font-size: 17px; font-weight: 600; }
   </div>
 </div>
 
+<!-- PIN Modal -->
+<div id="pinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:88%;max-width:320px;text-align:center;">
+    <div style="font-size:17px;font-weight:600;margin-bottom:6px;">🔒 用語リスト</div>
+    <div style="font-size:13px;color:#6e6e73;margin-bottom:20px;">4桁のPINを入力してください</div>
+    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;">
+      <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
+      <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
+      <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
+      <input type="tel" maxlength="1" class="pin-digit" style="width:52px;height:56px;font-size:24px;text-align:center;border:1.5px solid #c7c7cc;border-radius:12px;outline:none;-webkit-appearance:none;">
+    </div>
+    <div id="pinError" style="font-size:13px;color:#ff3b30;min-height:18px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closePinModal()" style="flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#f2f2f7;color:#3a3a3c;cursor:pointer;">キャンセル</button>
+      <button onclick="checkPin()" style="flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#007aff;color:#fff;cursor:pointer;">確認</button>
+    </div>
+    <div id="pinSetupHint" style="font-size:12px;color:#8e8e93;margin-top:14px;line-height:1.5;"></div>
+  </div>
+</div>
+
 <!-- Vocab Modal -->
 <div id="vocabModal">
   <div class="modal-box">
@@ -293,8 +313,64 @@ function showApp() {
   document.getElementById('app').style.display = 'flex';
 }
 
-// ── Vocab modal ──
+// ── PIN ──
 function openVocabModal() {
+  var pin = localStorage.getItem('vocab_pin') || '';
+  if (!pin) {
+    // PINが未設定：新規設定モード
+    document.getElementById('pinSetupHint').textContent = 'PINが未設定です。4桁を入力すると新しいPINとして登録されます。';
+  } else {
+    document.getElementById('pinSetupHint').textContent = '';
+  }
+  document.getElementById('pinError').textContent = '';
+  document.querySelectorAll('.pin-digit').forEach(function(el) { el.value = ''; });
+  document.getElementById('pinModal').style.display = 'flex';
+  setTimeout(function() { document.querySelectorAll('.pin-digit')[0].focus(); }, 100);
+
+  // 1文字入力したら次へ自動フォーカス
+  var digits = document.querySelectorAll('.pin-digit');
+  digits.forEach(function(el, i) {
+    el.oninput = function() {
+      el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
+      if (el.value && i < digits.length - 1) digits[i+1].focus();
+    };
+    el.onkeydown = function(e) {
+      if (e.key === 'Backspace' && !el.value && i > 0) digits[i-1].focus();
+      if (e.key === 'Enter') checkPin();
+    };
+  });
+}
+
+function closePinModal() {
+  document.getElementById('pinModal').style.display = 'none';
+}
+
+function checkPin() {
+  var entered = Array.from(document.querySelectorAll('.pin-digit')).map(function(el){ return el.value; }).join('');
+  if (entered.length < 4) {
+    document.getElementById('pinError').textContent = '4桁すべて入力してください';
+    return;
+  }
+  var savedPin = localStorage.getItem('vocab_pin') || '';
+  if (!savedPin) {
+    // 新規PIN登録
+    localStorage.setItem('vocab_pin', entered);
+    closePinModal();
+    openVocabModalDirect();
+    return;
+  }
+  if (entered === savedPin) {
+    closePinModal();
+    openVocabModalDirect();
+  } else {
+    document.getElementById('pinError').textContent = 'PINが違います';
+    document.querySelectorAll('.pin-digit').forEach(function(el){ el.value=''; });
+    document.querySelectorAll('.pin-digit')[0].focus();
+  }
+}
+
+// ── Vocab modal ──
+function openVocabModalDirect() {
   document.getElementById('vocabModalInput').value = vocab;
   document.getElementById('vocabModal').classList.add('open');
 }
