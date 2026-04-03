@@ -535,7 +535,7 @@ function startRecording() {
     isRecording = true;
     startWaveform(stream);
     document.getElementById('micBtn').classList.add('recording');
-    document.getElementById('micLabel').textContent = 'タップして停止';
+    
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('copyBtn').style.opacity = '0.35';
     document.getElementById('copyBtn').style.pointerEvents = 'none';
@@ -548,8 +548,16 @@ function startRecording() {
       seconds++;
       document.getElementById('timer').textContent = formatTime(seconds);
     }, 1000);
-  }).catch(function() {
-    setStatus('マイクへのアクセスが許可されていません', 'error');
+  }).catch(function(err) {
+    var msg = 'マイクにアクセスできません。';
+    if (err && err.name === 'NotAllowedError') {
+      msg = 'マイクが許可されていません。Safariの設定→このWebサイト→マイクを「許可」にしてください。';
+    } else if (err && err.name === 'NotFoundError') {
+      msg = 'マイクが見つかりません。';
+    } else if (err && err.name === 'NotReadableError') {
+      msg = 'マイクが他のアプリに使用中です。Safariを再起動してみてください。';
+    }
+    setStatus(msg, 'error');
   });
 }
 
@@ -560,7 +568,7 @@ function stopRecording() {
   clearInterval(timerInterval);
   stopWaveform();
   document.getElementById('micBtn').classList.remove('recording');
-  document.getElementById('micLabel').textContent = 'タップして録音';
+  
 }
 
 // ── Process ──
@@ -594,7 +602,7 @@ function processAudio() {
 
     var _t = transcript;
     
-    setStatus('<span class="spinner"></span>整形中…', 'loading');
+    setStatus('<span class="spinner"></span>変換中…', 'loading');
 
     // ② GPT整形プロンプトに固有名詞辞書を追加
     var basePrompt = PROMPTS[currentMode];
